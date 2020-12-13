@@ -1,0 +1,47 @@
+version: "3.5"
+services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack:latest
+    networks:
+      - localstack-network
+    privileged: true
+    ports:
+      - 4566:4566
+      - 8080:8080
+    environment:
+      - SERVICES=sqs,lambda,sns,dynamodb,s3
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PORT_WEB_UI=8080
+      - LAMBDA_EXECUTOR=docker
+      - LAMBDA_REMOTE_DOCKER=false
+      - LAMBDA_DOCKER_NETWORK=localstack-network
+      - AWS_ACCESS_KEY_ID=123
+      - AWS_SECRET_ACCESS_KEY=xyz
+      - DEFAULT_REGION=eu-west-1
+      - DEBUG=1
+      - HOSTNAME_EXTERNAL=localstack
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/localstack:/tmp/localstack
+
+  terraform:
+    build: ./infra
+    networks:
+      - localstack-network
+    depends_on:
+      - localstack
+
+  wait-localstack:
+    image: waisbrot/wait
+    networks:
+      - localstack-network
+    depends_on:
+      - localstack
+    environment:
+      - TARGETS=localstack:4566
+      - TIMEOUT=120
+
+networks:
+  localstack-network:
+    name: localstack-network
